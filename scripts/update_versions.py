@@ -9,13 +9,23 @@ Usage:
   python scripts/update_versions.py 17                      # final release
   python scripts/update_versions.py 17b1                    # beta -> 17.0.0b1
   python scripts/update_versions.py 20260630 --dev-of 17    # dated pre-release
-                                                            # -> 17.0.0.dev20260630
+                                                            # -> 17.0.0.dev2026063000
+  python scripts/update_versions.py 20260630 --dev-of 17 --rev 1
+                                                            # packaging-only refresh
+                                                            # -> 17.0.0.dev2026063001
 
 Dated pre-release builds MUST use --dev-of: without the mapping to a PEP 440
 .dev version, a date like 20260630 would become a package version that sorts
 above every real release forever. pip only installs pre-release and dev
 versions when asked (--pre or an exact version pin), matching how the
 pre-release channel is meant to be consumed.
+
+The dev number is date*100 + revision (ten digits): PEP 440 places .devN
+last, so N is the only field that can express a packaging-only refresh of
+a dev release. All dev numbers must keep this width - a differently-sized
+scheme would break date-major ordering. (The first published dev release,
+17.0.0.dev20260630, predates this scheme; being numerically smaller than
+every ten-digit value, it correctly sorts oldest.)
 """
 
 import argparse
@@ -36,11 +46,12 @@ DOWNLOAD_BASE = "https://www.princexml.com/download/"
 # the aarch64 one.
 
 
-def pep440(prince_version, dev_of=None):
+def pep440(prince_version, dev_of=None, rev=0):
     """Map a Prince version to a PEP 440 package version.
 
     "17" -> "17.0.0";  "16.2" -> "16.2.0";  "17b1" -> "17.0.0b1";
-    "20260630" with dev_of="17" -> "17.0.0.dev20260630".
+    "20260630" with dev_of="17" -> "17.0.0.dev2026063000"
+    (dev number = date*100 + rev, so packaging refreshes can bump rev).
     """
 
     def pad(release):
@@ -48,7 +59,11 @@ def pep440(prince_version, dev_of=None):
         return ".".join(parts + ["0"] * (3 - len(parts)))
 
     if dev_of:
-        return f"{pad(dev_of)}.dev{prince_version}"
+        if not (len(prince_version) == 8 and prince_version.isdigit()):
+            sys.exit(f"--dev-of expects an 8-digit dated build, got {prince_version!r}")
+        if not 0 <= rev <= 99:
+            sys.exit(f"--rev must be 0-99, got {rev}")
+        return f"{pad(dev_of)}.dev{prince_version}{rev:02d}"
     m = re.fullmatch(r"(\d+(?:\.\d+)*)(?:(a|b|rc)(\d+))?", prince_version)
     if not m:
         sys.exit(f"cannot map Prince version {prince_version!r} to PEP 440")
@@ -91,12 +106,19 @@ def main():
         metavar="RELEASE",
         help="the upcoming release this dated pre-release build leads to, e.g. 17",
     )
+    parser.add_argument(
+        "--rev",
+        type=int,
+        default=0,
+        metavar="N",
+        help="packaging revision for a dev release (bump for wrapper-only refreshes)",
+    )
     args = parser.parse_args()
     version = args.version
 
     # Map the version first: an unmappable one should fail before we
     # download ~300 MB of artifacts.
-    package_version = pep440(version, args.dev_of)
+    package_version = pep440(version, args.dev_of, args.rev)
 
     def url(filename):
         return DOWNLOAD_BASE + filename.format(v=version)

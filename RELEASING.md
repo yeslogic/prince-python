@@ -55,11 +55,17 @@ users (installed only with `--pre` or an exact version pin):
 
 - Betas: `python scripts/update_versions.py 17b1` → package `17.0.0b1`.
 - Dated builds: `python scripts/update_versions.py 20260630 --dev-of 17`
-  → package `17.0.0.dev20260630`. The `--dev-of` mapping is required — a
+  → package `17.0.0.dev2026063000`. The `--dev-of` mapping is required — a
   raw date used as a version would sort above every real release forever.
   `.dev` versions sort *before* the release they lead to
-  (`17.0.0.dev20260630 < 17.0.0b1 < 17.0.0`), so once 17.0.0 ships, dated
-  builds must target the next release: `--dev-of 17.1`.
+  (`17.0.0.dev… < 17.0.0b1 < 17.0.0`), so once 17.0.0 ships, dated builds
+  must target the next release: `--dev-of 17.1`.
+- The dev number is `date*100 + revision`: PEP 440 puts `.devN` last, so
+  post-style suffixes are impossible on dev releases and the revision must
+  live inside N. A wrapper-only refresh of a dev release is
+  `python scripts/update_versions.py 20260630 --dev-of 17 --rev 1`
+  → `17.0.0.dev2026063001`. Stable releases use `.postN` for the same
+  purpose (e.g. `16.2.0.post1`).
 
 Publish selected milestones, not nightlies: each release uploads ~200 MB
 of wheels against PyPI's default 10 GB per-project quota. Old `.dev`
