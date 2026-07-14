@@ -19,7 +19,7 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://www.princexml.com/"
-Documentation = "https://www.princexml.com/doc/"
+"Prince Manual" = "https://www.princexml.com/doc/"
 Repository = "https://github.com/yeslogic/prince-python"
 
 [project.scripts]

@@ -1,10 +1,14 @@
 """Python packaging of the Prince PDF engine (https://www.princexml.com/).
 
 The Prince engine is bundled inside this package; no separate installation
-is required. Free for non-commercial use (output carries a watermark on the
-first page until a license is installed); commercial use requires a license
-from YesLogic. See https://www.princexml.com/purchase/ and the license()
-function below.
+is required, and neither installing nor launching the engine downloads
+anything. (Converting a document that references remote images or
+stylesheets does fetch those resources.)
+
+Prince may be used without a purchased license under the conditions in the
+included Prince License Agreement; unlicensed output carries a watermark on
+the first page. Commercial use requires an appropriate license from
+YesLogic: https://www.princexml.com/purchase/
 
 Basic usage:
 
@@ -18,13 +22,16 @@ or from the command line:
     prince document.html -o document.pdf
 """
 
-import collections
+from __future__ import annotations
+
 import json
 import logging
 import os
 import re
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Any, Iterable, NamedTuple, Union
 
 __all__ = [
     "Message",
@@ -42,10 +49,18 @@ __all__ = [
 
 _log = logging.getLogger("prince_pdf")
 
-#: One engine diagnostic, parsed from structured log output.
-#: severity is "err", "wrn", "inf" or "dbg"; location is the resource
-#: (file or URL) the message refers to.
-Message = collections.namedtuple("Message", ["severity", "location", "text"])
+#: A path argument: str or any os.PathLike.
+StrPath = Union[str, "os.PathLike[str]"]
+
+
+class Message(NamedTuple):
+    """One engine diagnostic, parsed from structured log output."""
+
+    #: "err", "wrn", "inf" or "dbg"
+    severity: str
+    #: the resource (file or URL) the message refers to; may be empty
+    location: str
+    text: str
 
 try:
     from importlib.metadata import version as _dist_version
@@ -64,7 +79,9 @@ class PrinceError(RuntimeError):
     stderr holds its raw log output.
     """
 
-    def __init__(self, returncode, stderr, messages=()):
+    def __init__(
+        self, returncode: int, stderr: str, messages: Iterable[Message] = ()
+    ) -> None:
         self.returncode = returncode
         self.stderr = stderr or ""
         self.messages = list(messages)
@@ -82,7 +99,7 @@ class PrinceError(RuntimeError):
         super().__init__(message)
 
 
-def _meta():
+def _meta() -> dict[str, str]:
     path = _BUNDLE / "_meta.json"
     if not path.is_file():
         raise RuntimeError(
@@ -93,12 +110,12 @@ def _meta():
     return json.loads(path.read_text())
 
 
-def executable():
+def executable() -> Path:
     """Path to the bundled Prince engine binary."""
     return _BUNDLE / _meta()["engine"]
 
 
-def command(*args):
+def command(*args: str) -> list[str]:
     """The full argv used to invoke the bundled engine with *args*.
 
     If the PRINCE_LICENSE_FILE environment variable is set, the engine is
@@ -113,15 +130,20 @@ def command(*args):
     return argv
 
 
-def run(*args, **kwargs):
+def run(*args: str, **kwargs: Any) -> subprocess.CompletedProcess:
     """Invoke Prince with *args*; returns subprocess.CompletedProcess.
 
-    Keyword arguments are passed through to subprocess.run().
+    This is a thin subprocess.run() wrapper for callers who need raw
+    engine access; keyword arguments pass through to subprocess.run().
+    It does NOT apply the error handling or diagnostic parsing that
+    convert() provides: nonzero exit statuses do not raise (pass
+    check=True for CalledProcessError), and stdout/stderr are not
+    captured unless requested.
     """
     return subprocess.run(command(*args), **kwargs)
 
 
-def _parse_structured_log(stderr):
+def _parse_structured_log(stderr: str) -> "tuple[list[Message], str | None]":
     """Parse --structured-log=normal output into (messages, final_status)."""
     messages, final = [], None
     for line in stderr.splitlines():
@@ -134,7 +156,9 @@ def _parse_structured_log(stderr):
     return messages, final
 
 
-def _convert(cli_args, output, stdin=None):
+def _convert(
+    cli_args: Sequence[str], output: StrPath | None, stdin: bytes | None = None
+) -> "Path | bytes":
     proc = run(
         "--structured-log=normal",
         *cli_args,
@@ -153,11 +177,18 @@ def _convert(cli_args, output, stdin=None):
     return proc.stdout if output is None else Path(output)
 
 
-def convert(inputs, output=None, *, args=()):
+def convert(
+    inputs: "StrPath | Sequence[StrPath]",
+    output: StrPath | None = None,
+    *,
+    args: Sequence[str] = (),
+) -> "Path | bytes":
     """Convert one or more input files to a PDF.
 
-    Formats are detected per file: HTML, XML, SVG, and (with a bundled
-    Prince 17 or later) Markdown.
+    Strings are always interpreted as filesystem paths, never as document
+    content — to convert an HTML string, use html_to_pdf(). Formats are
+    detected per file: HTML, XML, SVG, and (with a bundled Prince 17 or
+    later) Markdown.
 
     inputs: a path, or a list of paths merged into one PDF.
     output: the PDF path to write, or None to return the PDF as bytes.
@@ -172,7 +203,12 @@ def convert(inputs, output=None, *, args=()):
     return _convert([*args, *[str(p) for p in inputs]], output)
 
 
-def _string_to_pdf(input_format, content, output, args):
+def _string_to_pdf(
+    input_format: str,
+    content: "str | bytes",
+    output: StrPath | None,
+    args: Sequence[str],
+) -> "Path | bytes":
     """Pipe a document string through the engine with an explicit format."""
     if isinstance(content, str):
         content = content.encode("utf-8")
@@ -181,13 +217,20 @@ def _string_to_pdf(input_format, content, output, args):
     )
 
 
-def html_to_pdf(html, output=None, *, args=()):
+def html_to_pdf(
+    html: "str | bytes",
+    output: StrPath | None = None,
+    *,
+    args: Sequence[str] = (),
+) -> "Path | bytes":
     """Convert an HTML document given as a string (or bytes) to a PDF.
 
     No temporary files are used: the document is piped to the engine's
-    stdin. Relative URLs in the document are resolved against the current
-    directory unless a base URL is supplied in args, e.g.
-    args=("--baseurl", "https://example.org/").
+    stdin. Because the engine never sees a filename, relative URLs in the
+    document (images, stylesheets) are resolved against the current
+    working directory — pass a base URL to resolve them against the
+    document's original location, e.g.
+    args=("--baseurl", "/path/to/document/assets/").
 
     Returns the output path (or the PDF bytes when output is None).
     Raises PrinceError on failure.
@@ -195,7 +238,12 @@ def html_to_pdf(html, output=None, *, args=()):
     return _string_to_pdf("html", html, output, args)
 
 
-def markdown_to_pdf(markdown, output=None, *, args=()):
+def markdown_to_pdf(
+    markdown: "str | bytes",
+    output: StrPath | None = None,
+    *,
+    args: Sequence[str] = (),
+) -> "Path | bytes":
     """Convert a Markdown document given as a string (or bytes) to a PDF.
 
     Requires a bundled engine with Markdown support (Prince 17 or later,
@@ -203,8 +251,9 @@ def markdown_to_pdf(markdown, output=None, *, args=()):
     """
     engine = _meta()["prince_version"]
     # Dated pre-release builds (e.g. 20260630) trivially satisfy >= 17.
-    major = int(re.match(r"\d+", engine).group())
-    if major < 17:
+    # An unrecognized version scheme skips the guard: the engine decides.
+    m = re.match(r"\d+", engine)
+    if m and int(m.group()) < 17:
         raise RuntimeError(
             f"Markdown input requires Prince 17 or later; this package "
             f"bundles Prince {engine}. Install a 17 build with "
@@ -214,7 +263,12 @@ def markdown_to_pdf(markdown, output=None, *, args=()):
     return _string_to_pdf("markdown", markdown, output, args)
 
 
-def xml_to_pdf(xml, output=None, *, args=()):
+def xml_to_pdf(
+    xml: "str | bytes",
+    output: StrPath | None = None,
+    *,
+    args: Sequence[str] = (),
+) -> "Path | bytes":
     """Convert an XML document given as a string (or bytes) to a PDF.
 
     Otherwise identical to html_to_pdf().
@@ -222,7 +276,7 @@ def xml_to_pdf(xml, output=None, *, args=()):
     return _string_to_pdf("xml", xml, output, args)
 
 
-def version():
+def version() -> str:
     """The bundled Prince engine's version string.
 
     Raises PrinceError if the engine cannot run at all (for example a
@@ -234,7 +288,7 @@ def version():
     return proc.stdout.splitlines()[0].strip()
 
 
-def license():
+def license() -> Path:
     """Where the bundled engine looks for its license file by default.
 
     Prefer setting the PRINCE_LICENSE_FILE environment variable to the

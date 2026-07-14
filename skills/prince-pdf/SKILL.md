@@ -49,12 +49,22 @@ pdf_bytes = prince_pdf.markdown_to_pdf("# Title\n\nBody text.")
 The `*_to_pdf` functions (`html_to_pdf`, `markdown_to_pdf`, `xml_to_pdf`)
 take the document as a string and pipe it through the engine with no
 temporary files; with `output=None` (the default) they return the PDF as
-bytes. Markdown input requires Prince 17+ (`pip install --pre prince-pdf`
+bytes. `convert()` always treats strings as file paths, never as content.
+Markdown input requires Prince 17+ (`pip install --pre prince-pdf`
 while 17 is in pre-release); on older engines `markdown_to_pdf` raises an
 error saying so. Failures raise `prince_pdf.PrinceError`, whose
 `.messages` list the engine's diagnostics as `(severity, location, text)`
 tuples — read them, they name the exact problem (missing file, bad CSS,
 unreachable resource).
+
+When converting a *string* whose content references relative resources
+(images, stylesheets), pass their location as a base URL — the engine
+reads the string from stdin and would otherwise resolve relative URLs
+against the current working directory:
+
+```python
+prince_pdf.html_to_pdf(html, args=("--baseurl", "/path/to/assets/"))
+```
 
 ## Page layout is controlled from CSS
 
@@ -87,7 +97,9 @@ https://www.princexml.com/doc/.
 
 ## Licensing
 
-Prince is free for evaluation and non-commercial use; unlicensed output
-carries a watermark on the first page — this is expected, not an error.
-A purchased license (https://www.princexml.com/purchase/) removes it: set
-the environment variable `PRINCE_LICENSE_FILE` to the license file's path.
+Prince may be used without a purchased license under the conditions in
+the Prince License Agreement (https://www.princexml.com/license/);
+unlicensed output carries a watermark on the first page — this is
+expected, not an error. Commercial use requires an appropriate YesLogic
+license (https://www.princexml.com/purchase/): set the environment
+variable `PRINCE_LICENSE_FILE` to the license file's path.
