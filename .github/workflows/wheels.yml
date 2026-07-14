@@ -55,7 +55,8 @@ jobs:
           # The official python alpine image is used so pip and PATH are
           # already correct; it is musl-based, so pip still selects the
           # musllinux wheels.
-          - { name: musl-x86_64,    runner: ubuntu-24.04,     musl: true }
+          # No musl-x86_64 entry: no self-contained musl x86_64 engine
+          # build exists yet (see the TODO in scripts/update_versions.py).
           - { name: musl-aarch64,   runner: ubuntu-24.04-arm, musl: true }
           - { name: macos,          runner: macos-14 }
           - { name: windows-x64,    runner: windows-latest }
@@ -90,12 +91,21 @@ jobs:
 
       # Prove the wheel installs and runs with no network access at all:
       # this is the property that makes it usable in registry-only sandboxes.
+      # The image is prepared (online) with the documented system packages -
+      # fonts, and libfontconfig1 which the x86-64 engine links dynamically -
+      # then the full smoke test runs with networking disabled.
       - name: Offline install check
         if: matrix.name == 'linux-x86_64'
         run: |
-          docker run --rm --network=none -v "$PWD/dist:/dist:ro" \
-            python:3.12-slim sh -ec \
-            "pip install --no-index --find-links /dist prince-pdf && prince --version"
+          docker build -t offline-base - <<'EOF'
+          FROM python:3.12-slim
+          RUN apt-get update && \
+              apt-get install -y --no-install-recommends libfontconfig1 fonts-dejavu-core && \
+              rm -rf /var/lib/apt/lists/*
+          EOF
+          docker run --rm --network=none \
+            -v "$PWD/dist:/dist:ro" -v "$PWD/tests:/tests:ro" offline-base \
+            sh -ec "pip install --no-index --find-links /dist prince-pdf && python /tests/smoke.py"
 
   publish:
     if: startsWith(github.ref, 'refs/tags/v')

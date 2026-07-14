@@ -35,8 +35,10 @@ engine at your license file with the `PRINCE_LICENSE_FILE` environment
 variable (preferred — it survives reinstalls), or install it at the path
 returned by `prince_pdf.license()`.
 
-Supported platforms: Linux x86-64 (glibc ≥ 2.17) and ARM64 (glibc ≥ 2.25),
-musl/Alpine x86-64 and ARM64, macOS 10.13+ (universal), Windows x64 and ARM64.
+Supported platforms: Linux x86-64 and ARM64 (glibc), musl/Alpine ARM64,
+macOS 10.13+ (universal), Windows x64 and ARM64. On Linux x86-64 the engine
+additionally needs the system fontconfig library — in minimal containers,
+`apt-get install libfontconfig1` (it usually arrives with fonts anyway).
 
 ## Names
 
@@ -75,8 +77,12 @@ installs an unrelated statistics library, not this package.
 
 - **Missing or wrong fonts in minimal containers**: the wheel bundles the
   engine but uses the system's fonts. Install some, e.g.
-  `apt-get install fonts-dejavu` (Debian/Ubuntu) or
+  `apt-get install fonts-dejavu fontconfig` (Debian/Ubuntu) or
   `apk add fontconfig ttf-dejavu` (Alpine).
+- **`libfontconfig.so.1: cannot open shared object file` (Linux x86-64)**:
+  install the system fontconfig library, e.g.
+  `apt-get install libfontconfig1` — installing fonts as above also
+  provides it.
 - **Watermark on the first page**: expected without a license — the engine
   is fully functional for evaluation and non-commercial use. A purchased
   license (via `PRINCE_LICENSE_FILE`) removes it.

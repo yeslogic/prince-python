@@ -10,10 +10,6 @@
       "url": "https://www.princexml.com/download/prince-20260630-linux-generic-aarch64.tar.gz",
       "sha256": "161bb2bc89915e5b03cb6680928be84e5b388f3bf90dec6c2768dd1202701ebc"
     },
-    "musllinux_1_2_x86_64": {
-      "url": "https://www.princexml.com/download/prince-20260630-alpine3.21-x86_64.tar.gz",
-      "sha256": "91d9a760b34852c4f29af6284ce9d4af6c8629889ddcc6b5d0f1e4dc49be415d"
-    },
     "musllinux_1_2_aarch64": {
       "url": "https://www.princexml.com/download/prince-20260630-linux-generic-aarch64-musl.tar.gz",
       "sha256": "f2384f75baa637d9a80230091a3bb1c6bdcba0c200f3b72ae7732757a7af4f95"

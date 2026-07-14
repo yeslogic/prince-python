@@ -223,8 +223,14 @@ def xml_to_pdf(xml, output=None, *, args=()):
 
 
 def version():
-    """The bundled Prince engine's version string."""
+    """The bundled Prince engine's version string.
+
+    Raises PrinceError if the engine cannot run at all (for example a
+    missing system library), with the loader's message attached.
+    """
     proc = run("--version", capture_output=True, text=True)
+    if proc.returncode != 0 or not proc.stdout.strip():
+        raise PrinceError(proc.returncode, proc.stderr)
     return proc.stdout.splitlines()[0].strip()
 
 

@@ -29,10 +29,11 @@ from _common import ROOT, download, extract, sha256
 
 DOWNLOAD_BASE = "https://www.princexml.com/download/"
 
-# Oldest Alpine release built for the channel; its build backs the x86_64
-# musl wheel (there is no linux-generic x86_64 musl tarball). The stable and
-# pre-release channels can differ - override with --alpine-oldest.
-ALPINE_OLDEST = "3.19"
+# TODO: no musllinux x86_64 wheel is built yet. The Alpine builds link
+# ~16 system libraries dynamically (the .apk declares them; a wheel cannot),
+# so they only work by accident on a prepared system. Add the wheel back
+# once a self-contained linux-generic-x86_64-musl tarball exists, mirroring
+# the aarch64 one.
 
 
 def pep440(prince_version, dev_of=None):
@@ -90,7 +91,6 @@ def main():
         metavar="RELEASE",
         help="the upcoming release this dated pre-release build leads to, e.g. 17",
     )
-    parser.add_argument("--alpine-oldest", default=ALPINE_OLDEST, metavar="X.Y")
     args = parser.parse_args()
     version = args.version
 
@@ -106,9 +106,6 @@ def main():
     for arch in ("x86_64", "aarch64"):
         path = download(url("prince-{v}-linux-generic-" + arch + ".tar.gz"))
         artifacts[f"manylinux_{glibc_floor(path)}_{arch}"] = path
-    artifacts[f"musllinux_{MUSL}_x86_64"] = download(
-        url("prince-{v}-alpine" + args.alpine_oldest + "-x86_64.tar.gz")
-    )
     artifacts[f"musllinux_{MUSL}_aarch64"] = download(
         url("prince-{v}-linux-generic-aarch64-musl.tar.gz")
     )
