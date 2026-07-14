@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "prince-pdf"
-version = "16.2.0"
+version = "17.0.0.dev20260630"
 description = "Prince: convert HTML with CSS to PDF. Bundles the Prince engine - no separate install required."
 readme = "README.md"
 requires-python = ">=3.8"
