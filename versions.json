@@ -1,30 +1,30 @@
 {
-  "prince_version": "20260630",
-  "package_version": "17.0.0.dev20260630",
+  "prince_version": "16.2",
+  "package_version": "16.2.0",
   "artifacts": {
-    "manylinux_2_25_x86_64": {
-      "url": "https://www.princexml.com/download/prince-20260630-linux-generic-x86_64.tar.gz",
-      "sha256": "5633631c4608d5cd38a3a484458841eb3abd111dc2840d5b05319cb244da4bd7"
+    "manylinux_2_17_x86_64": {
+      "url": "https://www.princexml.com/download/prince-16.2-linux-generic-x86_64.tar.gz",
+      "sha256": "131eece0b07ee832adef8291c6056156b3d04bfebc11ca40274948f8e40a8bbc"
     },
     "manylinux_2_25_aarch64": {
-      "url": "https://www.princexml.com/download/prince-20260630-linux-generic-aarch64.tar.gz",
-      "sha256": "161bb2bc89915e5b03cb6680928be84e5b388f3bf90dec6c2768dd1202701ebc"
+      "url": "https://www.princexml.com/download/prince-16.2-linux-generic-aarch64.tar.gz",
+      "sha256": "4ea3d160724456d8174ec219bef1d1604ad351ed6229867bf1459e2cdbfab258"
     },
     "musllinux_1_2_aarch64": {
-      "url": "https://www.princexml.com/download/prince-20260630-linux-generic-aarch64-musl.tar.gz",
-      "sha256": "f2384f75baa637d9a80230091a3bb1c6bdcba0c200f3b72ae7732757a7af4f95"
+      "url": "https://www.princexml.com/download/prince-16.2-linux-generic-aarch64-musl.tar.gz",
+      "sha256": "64148f9bde1ea03cf6938596dc9dc8fdd05514505b9556456aae433f69abe5e9"
     },
     "macosx_10_13_universal2": {
-      "url": "https://www.princexml.com/download/prince-20260630-macos.zip",
-      "sha256": "be565b0fb96650039345d2363c6092839667442f10abdff57922941e329f6a31"
+      "url": "https://www.princexml.com/download/prince-16.2-macos.zip",
+      "sha256": "30a14021a68c38b92c36beb2fddc62ea5425392a86d4cdc6767adde38a9af8aa"
     },
     "win_amd64": {
-      "url": "https://www.princexml.com/download/prince-20260630-win64.zip",
-      "sha256": "1037515ae1a0d57f9c144129d297c8868c84b87a91fca33cbd2928182b96e362"
+      "url": "https://www.princexml.com/download/prince-16.2-win64.zip",
+      "sha256": "830029d0abd5899605f7e4de90b6bdc6ba5044859f3e0d57e024c781c5be9f38"
     },
     "win_arm64": {
-      "url": "https://www.princexml.com/download/prince-20260630-win-arm64.zip",
-      "sha256": "4e7c8124b340d2aff6678c20828e596c6cd346f5882ecf9f9939b0ae79ae6575"
+      "url": "https://www.princexml.com/download/prince-16.2-win-arm64.zip",
+      "sha256": "f91a577994706ed9cb9edf8fee71adeacbe424131e52ebec25d75d07addebe11"
     }
   }
 }
