@@ -77,6 +77,14 @@ def main():
             print(f"markdown_to_pdf: {len(data)} byte PDF")
 
         try:
+            prince_pdf.convert([])
+        except ValueError as exc:
+            assert "at least one path" in str(exc), exc
+            print("empty inputs rejected with ValueError")
+        else:
+            raise AssertionError("convert([]) did not raise")
+
+        try:
             prince_pdf.convert("/nonexistent/input.html")
         except prince_pdf.PrinceError as exc:
             assert exc.messages, "expected parsed engine messages on failure"

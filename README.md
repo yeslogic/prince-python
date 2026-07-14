@@ -8,7 +8,11 @@ document being converted references remote resources such as images or
 stylesheets.)
 
 ```
+# stable Prince release
 pip install prince-pdf
+
+# Prince 17 pre-release, including Markdown input
+pip install --pre prince-pdf
 ```
 
 ```python
@@ -16,8 +20,10 @@ import prince_pdf
 
 prince_pdf.convert("document.html", "document.pdf")
 
-pdf_bytes = prince_pdf.html_to_pdf("<h1>Hello</h1>")        # in-memory
-pdf_bytes = prince_pdf.markdown_to_pdf("# Hello")           # Prince 17+
+pdf_bytes = prince_pdf.html_to_pdf("<h1>Hello</h1>")    # in-memory
+
+# requires the Prince 17 pre-release: pip install --pre prince-pdf
+pdf_bytes = prince_pdf.markdown_to_pdf("# Hello")
 ```
 
 The package also puts `prince` on `PATH`, so the full

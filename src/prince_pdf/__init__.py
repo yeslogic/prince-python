@@ -31,7 +31,7 @@ import re
 import subprocess
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Iterable, NamedTuple, Union
+from typing import Any, Iterable, Literal, NamedTuple, Union, cast
 
 __all__ = [
     "Message",
@@ -52,12 +52,14 @@ _log = logging.getLogger("prince_pdf")
 #: A path argument: str or any os.PathLike.
 StrPath = Union[str, "os.PathLike[str]"]
 
+#: Diagnostic severities emitted by the engine's structured log.
+Severity = Literal["err", "wrn", "inf", "dbg"]
+
 
 class Message(NamedTuple):
     """One engine diagnostic, parsed from structured log output."""
 
-    #: "err", "wrn", "inf" or "dbg"
-    severity: str
+    severity: Severity
     #: the resource (file or URL) the message refers to; may be empty
     location: str
     text: str
@@ -93,7 +95,10 @@ class PrinceError(RuntimeError):
             )
         else:
             detail = self.stderr.strip()
-        message = f"prince exited with status {returncode}"
+        if returncode:
+            message = f"prince exited with status {returncode}"
+        else:
+            message = "prince reported failure"
         if detail:
             message += "\n" + detail
         super().__init__(message)
@@ -150,7 +155,11 @@ def _parse_structured_log(stderr: str) -> "tuple[list[Message], str | None]":
         if line.startswith("msg|"):
             parts = line.split("|", 3)
             if len(parts) == 4:
-                messages.append(Message(parts[1], parts[2], parts[3]))
+                # cast: a future engine severity outside Severity still
+                # flows through at runtime rather than being dropped.
+                messages.append(
+                    Message(cast("Severity", parts[1]), parts[2], parts[3])
+                )
         elif line.startswith("fin|"):
             final = line.split("|", 1)[1]
     return messages, final
@@ -172,6 +181,8 @@ def _convert(
     for m in messages:
         if m.severity == "wrn":
             _log.warning("%s: %s", m.location, m.text)
+    # fin|failure with exit status 0 is not expected, but is treated as
+    # failure defensively.
     if proc.returncode != 0 or final == "failure":
         raise PrinceError(proc.returncode, stderr, messages)
     return proc.stdout if output is None else Path(output)
@@ -203,7 +214,10 @@ def convert(
     """
     if isinstance(inputs, (str, os.PathLike)):
         inputs = [inputs]
-    return _convert([*args, *[str(p) for p in inputs]], output)
+    paths = [str(path) for path in inputs]
+    if not paths:
+        raise ValueError("inputs must contain at least one path")
+    return _convert([*args, *paths], output)
 
 
 def _string_to_pdf(
