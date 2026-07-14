@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "prince-pdf"
+version = "16.2.0"
+description = "Prince: convert HTML with CSS to PDF. Bundles the Prince engine - no separate install required."
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT AND LicenseRef-Prince-License-Agreement"
+license-files = ["LICENSE", "LICENSE-Prince.txt"]
+keywords = ["pdf", "html", "css", "prince", "typesetting", "paged media", "html to pdf"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: Printing",
+    "Topic :: Text Processing :: Markup :: HTML",
+]
+
+[project.urls]
+Homepage = "https://www.princexml.com/"
+Documentation = "https://www.princexml.com/doc/"
+Repository = "https://github.com/yeslogic/prince-python"
+
+[project.scripts]
+prince = "prince_pdf._cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/prince_pdf"]
+
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "build_hook.py"

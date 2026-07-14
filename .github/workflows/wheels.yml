@@ -1,0 +1,123 @@
+name: wheels
+
+on:
+  pull_request:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Cache Prince release artifacts
+        uses: actions/cache@v4
+        with:
+          path: downloads
+          key: prince-artifacts-${{ hashFiles('versions.json') }}
+      - run: pip install build hatchling twine check-wheel-contents
+      - name: Download artifacts from princexml.com, verify checksums, build wheels
+        run: python scripts/build_wheels.py
+      - name: Check wheels
+        # W002 (duplicate files) is expected: many bundled contrib/ license
+        # texts are identical copies of Apache-2.0 / MIT.
+        run: |
+          twine check dist/*.whl
+          check-wheel-contents --ignore W002 dist/*.whl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels
+          path: dist/*.whl
+          if-no-files-found: error
+
+  test:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux-x86_64,   runner: ubuntu-24.04 }
+          - { name: linux-aarch64,  runner: ubuntu-24.04-arm }
+          # musl wheels are tested via `docker run` rather than a job-level
+          # alpine container: JavaScript-based actions (checkout,
+          # download-artifact) need glibc and fail inside musl containers.
+          # The official python alpine image is used so pip and PATH are
+          # already correct; it is musl-based, so pip still selects the
+          # musllinux wheels.
+          - { name: musl-x86_64,    runner: ubuntu-24.04,     musl: true }
+          - { name: musl-aarch64,   runner: ubuntu-24.04-arm, musl: true }
+          - { name: macos,          runner: macos-14 }
+          - { name: windows-x64,    runner: windows-latest }
+          - { name: windows-arm64,  runner: windows-11-arm }
+    name: test (${{ matrix.name }})
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheels
+          path: dist
+
+      - name: Install wheel and run smoke test (Alpine)
+        if: ${{ matrix.musl }}
+        run: |
+          docker run --rm -v "$PWD/dist:/dist:ro" -v "$PWD/tests:/tests:ro" \
+            python:3.12-alpine sh -ec '
+              apk add --no-cache fontconfig ttf-dejavu >/dev/null
+              pip -q install --no-index --find-links /dist prince-pdf
+              python /tests/smoke.py'
+
+      - uses: actions/setup-python@v5
+        if: ${{ !matrix.musl }}
+        with:
+          python-version: "3.12"
+      - name: Install wheel and run smoke test
+        if: ${{ !matrix.musl }}
+        run: |
+          python -m pip install --no-index --find-links dist prince-pdf
+          python tests/smoke.py
+
+      # Prove the wheel installs and runs with no network access at all:
+      # this is the property that makes it usable in registry-only sandboxes.
+      - name: Offline install check
+        if: matrix.name == 'linux-x86_64'
+        run: |
+          docker run --rm --network=none -v "$PWD/dist:/dist:ro" \
+            python:3.12-slim sh -ec \
+            "pip install --no-index --find-links /dist prince-pdf && prince --version"
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: ubuntu-24.04
+    environment: pypi
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check tag matches the package version
+        run: |
+          version=$(python3 -c "import json; print(json.load(open('versions.json'))['package_version'])")
+          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "tag ${GITHUB_REF_NAME} does not match package version ${version}" >&2
+            exit 1
+          fi
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheels
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
