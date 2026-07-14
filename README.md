@@ -60,8 +60,10 @@ The package ships inline type annotations (`py.typed`).
 - `prince_pdf.convert(inputs, output=None, args=())` — convert one or more
   files (HTML, XML, SVG; Markdown with Prince 17+; a list is merged into
   one PDF), with the format detected from each file. Extra command-line
-  options go in `args`, e.g. `args=("--javascript",)`. Returns the output
-  path, or the PDF as `bytes` when `output` is None.
+  options go in `args` as a sequence of individual argument tokens —
+  `args=("--baseurl", "https://x.example/")`, never a shell string like
+  `"--baseurl https://x.example/"`. Returns the output path, or the PDF
+  as `bytes` when `output` is None.
 - `prince_pdf.html_to_pdf(html, output=None, args=())`,
   `prince_pdf.markdown_to_pdf(markdown, ...)`,
   `prince_pdf.xml_to_pdf(xml, ...)` — convert a document given as a string

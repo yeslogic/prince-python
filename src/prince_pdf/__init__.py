@@ -192,7 +192,10 @@ def convert(
 
     inputs: a path, or a list of paths merged into one PDF.
     output: the PDF path to write, or None to return the PDF as bytes.
-    args:   extra command-line arguments, e.g. ("--javascript",).
+    args:   a sequence of individual command-line arguments (tokens),
+            e.g. ("--javascript",) or ("--baseurl", "https://x.example/").
+            Not a shell string: each option and each value is its own
+            element, and no shell quoting or splitting is applied.
 
     Returns the output path (or the PDF bytes when output is None).
     Raises PrinceError on failure; engine warnings are emitted on the
@@ -231,6 +234,9 @@ def html_to_pdf(
     working directory — pass a base URL to resolve them against the
     document's original location, e.g.
     args=("--baseurl", "/path/to/document/assets/").
+
+    args is a sequence of individual command-line argument tokens, not a
+    shell string (see convert()).
 
     Returns the output path (or the PDF bytes when output is None).
     Raises PrinceError on failure.
