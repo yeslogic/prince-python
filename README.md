@@ -98,8 +98,10 @@ The package ships inline type annotations (`py.typed`).
   exactly that.
 - Failures raise `PrinceError` carrying `.returncode`, raw `.stderr`, and
   `.messages` — the engine's diagnostics parsed into
-  `Message(severity, location, text)` tuples. Engine warnings during
-  successful conversions are emitted on the `"prince_pdf"` logger.
+  `Message(severity, location, text)` tuples. During successful
+  conversions, engine warnings are emitted on the `"prince_pdf"` logger;
+  pass `on_message=` to receive every diagnostic yourself instead (an
+  exception from the callback aborts the call).
 - `prince_pdf.run(*args, **kwargs)` — a thin `subprocess.run()` wrapper
   for raw engine access. It does **not** apply the error handling or
   diagnostic parsing that `convert()` provides: nonzero exits do not

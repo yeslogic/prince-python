@@ -123,6 +123,22 @@ def main():
         else:
             raise AssertionError("conversion of a missing file did not fail")
 
+        seen = []
+        try:
+            prince_pdf.convert("/nonexistent/input.html", on_message=seen.append)
+        except prince_pdf.PrinceError:
+            pass
+        assert seen and seen[0].severity == "err", seen
+        def raising_callback(message):
+            raise ValueError(message)
+
+        try:
+            prince_pdf.convert("/nonexistent/input.html", on_message=raising_callback)
+        except ValueError:
+            print("on_message: diagnostics delivered, exceptions propagate")
+        else:
+            raise AssertionError("on_message exception did not propagate")
+
     print("smoke test passed")
 
 

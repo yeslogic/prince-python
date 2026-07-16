@@ -31,7 +31,7 @@ import re
 import subprocess
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Iterable, Literal, NamedTuple, Union, cast
+from typing import Any, Callable, Iterable, Literal, NamedTuple, Union, cast
 
 __all__ = [
     "Message",
@@ -200,11 +200,16 @@ def _parse_structured_log(stderr: str) -> "tuple[list[Message], str | None]":
     return messages, final
 
 
+#: Callback receiving each parsed engine diagnostic.
+OnMessage = Callable[[Message], None]
+
+
 def _convert(
     cli_args: Sequence[str],
     output: StrPath | None,
     stdin: bytes | None = None,
     executable: "StrPath | None" = None,
+    on_message: "OnMessage | None" = None,
 ) -> "Path | bytes":
     proc = subprocess.run(
         _command(
@@ -219,8 +224,12 @@ def _convert(
     )
     stderr = proc.stderr.decode("utf-8", errors="replace")
     messages, final = _parse_structured_log(stderr)
+    # Dispatch diagnostics before deciding the outcome, so an exception
+    # from the caller's on_message callback takes precedence.
     for m in messages:
-        if m.severity == "wrn":
+        if on_message is not None:
+            on_message(m)
+        elif m.severity == "wrn":
             _log.warning("%s: %s", m.location, m.text)
     # fin|failure with exit status 0 is not expected, but is treated as
     # failure defensively.
@@ -235,6 +244,7 @@ def convert(
     *,
     args: Sequence[str] = (),
     executable: "StrPath | None" = None,
+    on_message: "OnMessage | None" = None,
 ) -> "Path | bytes":
     """Convert one or more input files to a PDF.
 
@@ -252,17 +262,21 @@ def convert(
     executable: path to a separately installed prince executable to run
             instead of the bundled engine; overrides the PRINCE_PATH
             environment variable (see the README for details).
+    on_message: called with every parsed engine diagnostic (a Message).
+            When omitted, warnings are emitted on the "prince_pdf"
+            logger. An exception from the callback aborts the call.
 
     Returns the output path (or the PDF bytes when output is None).
-    Raises PrinceError on failure; engine warnings are emitted on the
-    "prince_pdf" logger.
+    Raises PrinceError on failure.
     """
     if isinstance(inputs, (str, os.PathLike)):
         inputs = [inputs]
     paths = [str(path) for path in inputs]
     if not paths:
         raise ValueError("inputs must contain at least one path")
-    return _convert([*args, *paths], output, executable=executable)
+    return _convert(
+        [*args, *paths], output, executable=executable, on_message=on_message
+    )
 
 
 def _string_to_pdf(
@@ -271,6 +285,7 @@ def _string_to_pdf(
     output: StrPath | None,
     args: Sequence[str],
     executable: "StrPath | None" = None,
+    on_message: "OnMessage | None" = None,
 ) -> "Path | bytes":
     """Pipe a document string through the engine with an explicit format."""
     if isinstance(content, str):
@@ -280,6 +295,7 @@ def _string_to_pdf(
         output,
         stdin=content,
         executable=executable,
+        on_message=on_message,
     )
 
 
@@ -289,6 +305,7 @@ def html_to_pdf(
     *,
     args: Sequence[str] = (),
     executable: "StrPath | None" = None,
+    on_message: "OnMessage | None" = None,
 ) -> "Path | bytes":
     """Convert an HTML document given as a string (or bytes) to a PDF.
 
@@ -300,13 +317,13 @@ def html_to_pdf(
     args=("--baseurl", "/path/to/document/assets/").
 
     args is a sequence of individual command-line argument tokens, not a
-    shell string; executable selects a separately installed Prince (see
-    convert()).
+    shell string; executable selects a separately installed Prince;
+    on_message receives each parsed engine diagnostic (see convert()).
 
     Returns the output path (or the PDF bytes when output is None).
     Raises PrinceError on failure.
     """
-    return _string_to_pdf("html", html, output, args, executable)
+    return _string_to_pdf("html", html, output, args, executable, on_message)
 
 
 def markdown_to_pdf(
@@ -315,6 +332,7 @@ def markdown_to_pdf(
     *,
     args: Sequence[str] = (),
     executable: "StrPath | None" = None,
+    on_message: "OnMessage | None" = None,
 ) -> "Path | bytes":
     """Convert a Markdown document given as a string (or bytes) to a PDF.
 
@@ -336,7 +354,9 @@ def markdown_to_pdf(
                 f"`pip install --pre prince-pdf`, or convert the Markdown to "
                 f"HTML and use html_to_pdf()."
             )
-    return _string_to_pdf("markdown", markdown, output, args, executable)
+    return _string_to_pdf(
+        "markdown", markdown, output, args, executable, on_message
+    )
 
 
 def xml_to_pdf(
@@ -345,12 +365,13 @@ def xml_to_pdf(
     *,
     args: Sequence[str] = (),
     executable: "StrPath | None" = None,
+    on_message: "OnMessage | None" = None,
 ) -> "Path | bytes":
     """Convert an XML document given as a string (or bytes) to a PDF.
 
     Otherwise identical to html_to_pdf().
     """
-    return _string_to_pdf("xml", xml, output, args, executable)
+    return _string_to_pdf("xml", xml, output, args, executable, on_message)
 
 
 def version() -> str:
