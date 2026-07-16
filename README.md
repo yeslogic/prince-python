@@ -59,6 +59,25 @@ location as a base URL:
 prince_pdf.html_to_pdf(html, args=("--baseurl", "/tmp/report/"))
 ```
 
+## Using a separately installed Prince
+
+The bundled engine is the default, but the wrapper can drive an existing
+Prince installation instead — a licensed system install, or a newer
+engine. Set the `PRINCE_PATH` environment variable to the installation's
+`prince` executable (the command you would normally run — pointing it at
+a directory is rejected with an error), or select one per call:
+
+```python
+prince_pdf.convert("doc.html", "doc.pdf", executable="/usr/bin/prince")
+```
+
+The per-call `executable` argument overrides `PRINCE_PATH`, which
+overrides the bundled engine. External engines run without `--prefix`,
+so the installation locates its own style sheets, fonts, and license;
+note that `markdown_to_pdf()`'s version check applies only to the
+bundled engine — a separately installed pre-17 Prince reports its own
+error for Markdown input. `PRINCE_LICENSE_FILE` is honored either way.
+
 ## Python API
 
 The package ships inline type annotations (`py.typed`).
@@ -88,7 +107,8 @@ The package ships inline type annotations (`py.typed`).
   captured unless requested.
 - `prince_pdf.command(*args)` — the argv list that would be run, for use
   with external process tooling (same caveats as `run()`).
-- `prince_pdf.executable()` — path of the bundled engine binary.
+- `prince_pdf.executable()` — path of the engine that will be invoked
+  (the bundled engine, unless `PRINCE_PATH` selects another).
 - `prince_pdf.version()` — the engine's version string.
 - `prince_pdf.license()` — the default license-file location inside the
   bundle (prefer `PRINCE_LICENSE_FILE`, which survives reinstalls).

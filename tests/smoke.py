@@ -7,6 +7,7 @@ without fonts or network, where a conversion is not meaningful.
 """
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -75,6 +76,35 @@ def main():
         else:
             assert data[:5] == b"%PDF-", f"markdown_to_pdf output: {data[:16]!r}"
             print(f"markdown_to_pdf: {len(data)} byte PDF")
+
+        if os.name == "posix":
+            # A separately installed Prince, emulated by a launcher script
+            # of the same shape system installations use (exec with
+            # --prefix).
+            with tempfile.TemporaryDirectory() as tmp:
+                engine = prince_pdf.executable()
+                launcher = Path(tmp) / "prince"
+                launcher.write_text(
+                    f'#!/bin/sh\nexec "{engine}" '
+                    f'--prefix="{engine.parent.parent}" "$@"\n'
+                )
+                launcher.chmod(0o755)
+                data = prince_pdf.html_to_pdf(HTML, executable=launcher)
+                assert data[:5] == b"%PDF-", "external engine via executable="
+                os.environ["PRINCE_PATH"] = str(launcher)
+                try:
+                    assert prince_pdf.executable() == launcher
+                    v = prince_pdf.version()
+                    assert v.startswith("Prince "), f"via PRINCE_PATH: {v!r}"
+                finally:
+                    del os.environ["PRINCE_PATH"]
+                try:
+                    prince_pdf.html_to_pdf(HTML, executable=tmp)
+                except RuntimeError as exc:
+                    assert "not a directory" in str(exc), exc
+                else:
+                    raise AssertionError("directory executable= not rejected")
+            print("external engine (executable=, PRINCE_PATH): ok")
 
         try:
             prince_pdf.convert([])

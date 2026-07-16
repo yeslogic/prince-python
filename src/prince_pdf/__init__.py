@@ -115,24 +115,59 @@ def _meta() -> dict[str, str]:
     return json.loads(path.read_text())
 
 
-def executable() -> Path:
-    """Path to the bundled Prince engine binary."""
-    return _BUNDLE / _meta()["engine"]
+def _resolve_engine(
+    executable: "StrPath | None" = None,
+) -> "tuple[str, str | None]":
+    """Resolve which engine to invoke, as (program, prefix or None).
 
-
-def command(*args: str) -> list[str]:
-    """The full argv used to invoke the bundled engine with *args*.
-
-    If the PRINCE_LICENSE_FILE environment variable is set, the engine is
-    pointed at that license file; this avoids writing into site-packages,
-    which may not be writable and is replaced on every reinstall.
+    An explicit *executable* argument or the PRINCE_PATH environment
+    variable selects a separately installed Prince, run without --prefix
+    so the installation locates its own resources; otherwise the bundled
+    engine is used.
     """
-    argv = [str(executable()), f"--prefix={_BUNDLE}"]
+    external = executable or os.environ.get("PRINCE_PATH")
+    if external:
+        p = Path(external)
+        if p.is_dir():
+            raise RuntimeError(
+                f"PRINCE_PATH (or the executable argument) must point to "
+                f"the prince executable, not a directory: {p}"
+            )
+        if not p.exists():
+            raise RuntimeError(f"prince executable not found: {p}")
+        return str(p), None
+    return str(_BUNDLE / _meta()["engine"]), str(_BUNDLE)
+
+
+def _command(executable: "StrPath | None", *args: str) -> list[str]:
+    program, prefix = _resolve_engine(executable)
+    argv = [program]
+    if prefix:
+        argv.append(f"--prefix={prefix}")
     license_file = os.environ.get("PRINCE_LICENSE_FILE")
     if license_file:
         argv.append(f"--license-file={license_file}")
     argv.extend(args)
     return argv
+
+
+def executable() -> Path:
+    """Path to the Prince engine that will be invoked.
+
+    This is the bundled engine, unless the PRINCE_PATH environment
+    variable selects a separately installed one.
+    """
+    return Path(_resolve_engine()[0])
+
+
+def command(*args: str) -> list[str]:
+    """The full argv used to invoke the engine with *args*.
+
+    If the PRINCE_LICENSE_FILE environment variable is set, the engine is
+    pointed at that license file; this avoids writing into site-packages,
+    which may not be writable and is replaced on every reinstall.
+    """
+    return _command(None, *args)
 
 
 def run(*args: str, **kwargs: Any) -> subprocess.CompletedProcess:
@@ -166,13 +201,19 @@ def _parse_structured_log(stderr: str) -> "tuple[list[Message], str | None]":
 
 
 def _convert(
-    cli_args: Sequence[str], output: StrPath | None, stdin: bytes | None = None
+    cli_args: Sequence[str],
+    output: StrPath | None,
+    stdin: bytes | None = None,
+    executable: "StrPath | None" = None,
 ) -> "Path | bytes":
-    proc = run(
-        "--structured-log=normal",
-        *cli_args,
-        "-o",
-        "-" if output is None else str(output),
+    proc = subprocess.run(
+        _command(
+            executable,
+            "--structured-log=normal",
+            *cli_args,
+            "-o",
+            "-" if output is None else str(output),
+        ),
         input=stdin,
         capture_output=True,
     )
@@ -193,6 +234,7 @@ def convert(
     output: StrPath | None = None,
     *,
     args: Sequence[str] = (),
+    executable: "StrPath | None" = None,
 ) -> "Path | bytes":
     """Convert one or more input files to a PDF.
 
@@ -207,6 +249,9 @@ def convert(
             e.g. ("--javascript",) or ("--baseurl", "https://x.example/").
             Not a shell string: each option and each value is its own
             element, and no shell quoting or splitting is applied.
+    executable: path to a separately installed prince executable to run
+            instead of the bundled engine; overrides the PRINCE_PATH
+            environment variable (see the README for details).
 
     Returns the output path (or the PDF bytes when output is None).
     Raises PrinceError on failure; engine warnings are emitted on the
@@ -217,7 +262,7 @@ def convert(
     paths = [str(path) for path in inputs]
     if not paths:
         raise ValueError("inputs must contain at least one path")
-    return _convert([*args, *paths], output)
+    return _convert([*args, *paths], output, executable=executable)
 
 
 def _string_to_pdf(
@@ -225,12 +270,16 @@ def _string_to_pdf(
     content: "str | bytes",
     output: StrPath | None,
     args: Sequence[str],
+    executable: "StrPath | None" = None,
 ) -> "Path | bytes":
     """Pipe a document string through the engine with an explicit format."""
     if isinstance(content, str):
         content = content.encode("utf-8")
     return _convert(
-        [f"--input={input_format}", *args, "-"], output, stdin=content
+        [f"--input={input_format}", *args, "-"],
+        output,
+        stdin=content,
+        executable=executable,
     )
 
 
@@ -239,6 +288,7 @@ def html_to_pdf(
     output: StrPath | None = None,
     *,
     args: Sequence[str] = (),
+    executable: "StrPath | None" = None,
 ) -> "Path | bytes":
     """Convert an HTML document given as a string (or bytes) to a PDF.
 
@@ -250,12 +300,13 @@ def html_to_pdf(
     args=("--baseurl", "/path/to/document/assets/").
 
     args is a sequence of individual command-line argument tokens, not a
-    shell string (see convert()).
+    shell string; executable selects a separately installed Prince (see
+    convert()).
 
     Returns the output path (or the PDF bytes when output is None).
     Raises PrinceError on failure.
     """
-    return _string_to_pdf("html", html, output, args)
+    return _string_to_pdf("html", html, output, args, executable)
 
 
 def markdown_to_pdf(
@@ -263,24 +314,29 @@ def markdown_to_pdf(
     output: StrPath | None = None,
     *,
     args: Sequence[str] = (),
+    executable: "StrPath | None" = None,
 ) -> "Path | bytes":
     """Convert a Markdown document given as a string (or bytes) to a PDF.
 
-    Requires a bundled engine with Markdown support (Prince 17 or later,
+    Requires an engine with Markdown support (Prince 17 or later,
     including 17 pre-release builds). Otherwise identical to html_to_pdf().
     """
-    engine = _meta()["prince_version"]
-    # Dated pre-release builds (e.g. 20260630) trivially satisfy >= 17.
-    # An unrecognized version scheme skips the guard: the engine decides.
-    m = re.match(r"\d+", engine)
-    if m and int(m.group()) < 17:
-        raise RuntimeError(
-            f"Markdown input requires Prince 17 or later; this package "
-            f"bundles Prince {engine}. Install a 17 build with "
-            f"`pip install --pre prince-pdf`, or convert the Markdown to "
-            f"HTML and use html_to_pdf()."
-        )
-    return _string_to_pdf("markdown", markdown, output, args)
+    # The version guard only knows the bundled engine; with a separately
+    # installed Prince (executable argument or PRINCE_PATH), the engine
+    # decides whether it supports Markdown.
+    if executable is None and not os.environ.get("PRINCE_PATH"):
+        engine = _meta()["prince_version"]
+        # Dated pre-release builds (e.g. 20260630) trivially satisfy >= 17.
+        # An unrecognized version scheme skips the guard: the engine decides.
+        m = re.match(r"\d+", engine)
+        if m and int(m.group()) < 17:
+            raise RuntimeError(
+                f"Markdown input requires Prince 17 or later; this package "
+                f"bundles Prince {engine}. Install a 17 build with "
+                f"`pip install --pre prince-pdf`, or convert the Markdown to "
+                f"HTML and use html_to_pdf()."
+            )
+    return _string_to_pdf("markdown", markdown, output, args, executable)
 
 
 def xml_to_pdf(
@@ -288,12 +344,13 @@ def xml_to_pdf(
     output: StrPath | None = None,
     *,
     args: Sequence[str] = (),
+    executable: "StrPath | None" = None,
 ) -> "Path | bytes":
     """Convert an XML document given as a string (or bytes) to a PDF.
 
     Otherwise identical to html_to_pdf().
     """
-    return _string_to_pdf("xml", xml, output, args)
+    return _string_to_pdf("xml", xml, output, args, executable)
 
 
 def version() -> str:
