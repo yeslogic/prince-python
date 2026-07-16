@@ -139,6 +139,12 @@ itself is MIT-licensed (`LICENSE`).
 - **Documents referencing remote resources**: fetching `http(s)` images or
   stylesheets requires network access at conversion time; self-contained
   local files need none.
+- **`No matching distribution found for prince-pdf`**: this means pip
+  couldn't reach or match, not necessarily that the package doesn't
+  exist. In sandboxed environments, check proxy settings
+  (`pip config list`, `HTTP_PROXY`/`NO_PROXY`) — the registry may only
+  be reachable through the sandbox's egress proxy. It can also mean no
+  wheel exists for the platform (see Supported platforms below).
 - **Diagnosing failures**: `PrinceError.stderr` carries the engine's
   warnings and errors; add `--verbose` (or `-o` plus `--log=FILE`) for
   more detail.
@@ -150,7 +156,11 @@ Linux x86-64 and ARM64 (glibc), musl/Alpine ARM64, macOS 10.13+
 additionally needs the system fontconfig library — in minimal containers,
 `apt-get install libfontconfig1` (it usually arrives with fonts anyway).
 
+Python 3.8 or later.
+
 ---
 
 Maintainer documentation — how wheels are built, verified, and released —
-is in [RELEASING.md](RELEASING.md).
+is in [RELEASING.md](RELEASING.md). A Node.js equivalent of this package
+is [available on npm](https://www.npmjs.com/package/prince-pdf) under the
+same name.

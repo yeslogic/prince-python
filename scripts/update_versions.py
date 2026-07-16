@@ -64,6 +64,11 @@ def pep440(prince_version, dev_of=None, rev=0):
         if not 0 <= rev <= 99:
             sys.exit(f"--rev must be 0-99, got {rev}")
         return f"{pad(dev_of)}.dev{prince_version}{rev:02d}"
+    if rev:
+        sys.exit(
+            "--rev only applies to dated dev builds (--dev-of); wrapper-only "
+            "refreshes of a stable release use a .postN version (RELEASING.md)"
+        )
     m = re.fullmatch(r"(\d+(?:\.\d+)*)(?:(a|b|rc)(\d+))?", prince_version)
     if not m:
         sys.exit(f"cannot map Prince version {prince_version!r} to PEP 440")

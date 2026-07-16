@@ -26,7 +26,11 @@ jobs:
         with:
           path: downloads
           key: prince-artifacts-${{ hashFiles('versions.json') }}
-      - run: pip install build hatchling twine check-wheel-contents
+      - run: pip install build hatchling twine check-wheel-contents mypy pyflakes
+      - name: Lint and type-check the wrapper
+        run: |
+          pyflakes src/prince_pdf tests scripts build_hook.py
+          mypy src/prince_pdf
       - name: Download artifacts from princexml.com, verify checksums, build wheels
         run: python scripts/build_wheels.py
       - name: Check wheels
@@ -35,6 +39,17 @@ jobs:
         run: |
           twine check dist/*.whl
           check-wheel-contents --ignore W002 dist/*.whl
+      - name: Check the engine is present in every wheel
+        run: |
+          python - <<'EOF'
+          import glob, sys, zipfile
+          engines = {"prince_pdf/_bundle/bin/prince", "prince_pdf/_bundle/bin/prince.exe"}
+          for wheel in sorted(glob.glob("dist/*.whl")):
+              names = set(zipfile.ZipFile(wheel).namelist())
+              if not engines & names:
+                  sys.exit(f"{wheel}: no engine binary in wheel")
+              print(f"{wheel}: engine present")
+          EOF
       - uses: actions/upload-artifact@v4
         with:
           name: wheels
@@ -128,6 +143,9 @@ jobs:
         with:
           name: wheels
           path: dist
+      # skip-existing makes an interrupted release resumable by re-running:
+      # already-uploaded wheels are skipped instead of failing the job.
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist
+          skip-existing: true

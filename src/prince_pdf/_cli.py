@@ -11,7 +11,7 @@ def main():
     try:
         argv = prince_pdf.command(*sys.argv[1:])
     except RuntimeError as exc:
-        print(f"prince: {exc}", file=sys.stderr)
+        print(f"prince-pdf: {exc}", file=sys.stderr)
         return 1
     if os.name == "posix":
         os.execv(argv[0], argv)

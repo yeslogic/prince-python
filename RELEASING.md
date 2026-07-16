@@ -45,8 +45,8 @@ python tests/smoke.py
 ## Releasing a new Prince version
 
 1. `python scripts/update_versions.py 17`
-2. Review the diff, commit, and push a tag matching the new package
-   version (`v17.0.0`).
+2. Review the diff, commit, push, and check CI is green; then push a tag
+   matching the new package version (`v17.0.0`).
 3. CI builds, tests, and publishes to PyPI. Packaging-only fixes between
    engine releases use PEP 440 post-releases: `17.0.0.post1`.
 

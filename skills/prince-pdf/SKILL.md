@@ -26,6 +26,10 @@ ARM64), macOS, and Windows.
 In minimal containers install system fonts first:
 `apt-get install fonts-dejavu` or `apk add fontconfig ttf-dejavu`.
 
+For Node.js projects, the same package exists on npm
+(`npm install prince-pdf`) with an equivalent API (`htmlToPdf`,
+`markdownToPdf`, `convert`) and the same `prince` CLI.
+
 ## Convert
 
 Command line (full option reference: https://www.princexml.com/doc/command-line/):
