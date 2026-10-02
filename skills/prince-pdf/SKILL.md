@@ -54,9 +54,7 @@ The `*_to_pdf` functions (`html_to_pdf`, `markdown_to_pdf`, `xml_to_pdf`)
 take the document as a string and pipe it through the engine with no
 temporary files; with `output=None` (the default) they return the PDF as
 bytes. `convert()` always treats strings as file paths, never as content.
-Markdown input requires Prince 17+ (`pip install --pre prince-pdf`
-while 17 is in pre-release); on older engines `markdown_to_pdf` raises an
-error saying so. Failures raise `prince_pdf.PrinceError`, whose
+Markdown input requires Prince 17 or later. Failures raise `prince_pdf.PrinceError`, whose
 `.messages` list the engine's diagnostics as `(severity, location, text)`
 tuples — read them, they name the exact problem (missing file, bad CSS,
 unreachable resource).

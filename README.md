@@ -8,11 +8,7 @@ document being converted references remote resources such as images or
 stylesheets.)
 
 ```
-# stable Prince release
 pip install prince-pdf
-
-# Prince 17 pre-release, including Markdown input
-pip install --pre prince-pdf
 ```
 
 ```python
@@ -22,7 +18,6 @@ prince_pdf.convert("document.html", "document.pdf")
 
 pdf_bytes = prince_pdf.html_to_pdf("<h1>Hello</h1>")    # in-memory
 
-# requires the Prince 17 pre-release: pip install --pre prince-pdf
 pdf_bytes = prince_pdf.markdown_to_pdf("# Hello")
 ```
 
@@ -73,10 +68,8 @@ prince_pdf.convert("doc.html", "doc.pdf", executable="/usr/bin/prince")
 
 The per-call `executable` argument overrides `PRINCE_PATH`, which
 overrides the bundled engine. External engines run without `--prefix`,
-so the installation locates its own style sheets, fonts, and license;
-note that `markdown_to_pdf()`'s version check applies only to the
-bundled engine — a separately installed pre-17 Prince reports its own
-error for Markdown input. `PRINCE_LICENSE_FILE` is honored either way.
+so the installation locates its own style sheets, fonts, and license.
+`PRINCE_LICENSE_FILE` is honored either way.
 
 ## Python API
 
@@ -92,10 +85,8 @@ The package ships inline type annotations (`py.typed`).
 - `prince_pdf.html_to_pdf(html, output=None, args=())`,
   `prince_pdf.markdown_to_pdf(markdown, ...)`,
   `prince_pdf.xml_to_pdf(xml, ...)` — convert a document given as a string
-  or bytes, without temporary files. Markdown input requires a bundled
-  Prince 17 or later (`pip install --pre prince-pdf` while 17 is in
-  pre-release); on older engines `markdown_to_pdf` raises an error saying
-  exactly that.
+  or bytes, without temporary files. Markdown input requires Prince 17
+  or later.
 - Failures raise `PrinceError` carrying `.returncode`, raw `.stderr`, and
   `.messages` — the engine's diagnostics parsed into
   `Message(severity, location, text)` tuples. During successful

@@ -66,16 +66,9 @@ def main():
         assert data[:5] == b"%PDF-", f"html_to_pdf output: {data[:16]!r}"
         print(f"html_to_pdf (in-memory): {len(data)} byte PDF")
 
-        try:
-            data = prince_pdf.markdown_to_pdf("# Smoke test\n\nMarkdown *works*.\n")
-        except RuntimeError as exc:
-            # Engines before Prince 17 have no Markdown support; the wrapper
-            # must say so instead of surfacing a misleading XML parse error.
-            assert "Prince 17" in str(exc), f"unhelpful markdown error: {exc}"
-            print("markdown_to_pdf: no engine support, guarded correctly")
-        else:
-            assert data[:5] == b"%PDF-", f"markdown_to_pdf output: {data[:16]!r}"
-            print(f"markdown_to_pdf: {len(data)} byte PDF")
+        data = prince_pdf.markdown_to_pdf("# Smoke test\n\nMarkdown *works*.\n")
+        assert data[:5] == b"%PDF-", f"markdown_to_pdf output: {data[:16]!r}"
+        print(f"markdown_to_pdf: {len(data)} byte PDF")
 
         if os.name == "posix":
             # A separately installed Prince, emulated by a launcher script

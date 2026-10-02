@@ -27,7 +27,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import re
 import subprocess
 from collections.abc import Sequence
 from pathlib import Path
@@ -336,24 +335,8 @@ def markdown_to_pdf(
 ) -> "Path | bytes":
     """Convert a Markdown document given as a string (or bytes) to a PDF.
 
-    Requires an engine with Markdown support (Prince 17 or later,
-    including 17 pre-release builds). Otherwise identical to html_to_pdf().
+    Requires Prince 17 or later. Otherwise identical to html_to_pdf().
     """
-    # The version guard only knows the bundled engine; with a separately
-    # installed Prince (executable argument or PRINCE_PATH), the engine
-    # decides whether it supports Markdown.
-    if executable is None and not os.environ.get("PRINCE_PATH"):
-        engine = _meta()["prince_version"]
-        # Dated pre-release builds (e.g. 20260630) trivially satisfy >= 17.
-        # An unrecognized version scheme skips the guard: the engine decides.
-        m = re.match(r"\d+", engine)
-        if m and int(m.group()) < 17:
-            raise RuntimeError(
-                f"Markdown input requires Prince 17 or later; this package "
-                f"bundles Prince {engine}. Install a 17 build with "
-                f"`pip install --pre prince-pdf`, or convert the Markdown to "
-                f"HTML and use html_to_pdf()."
-            )
     return _string_to_pdf(
         "markdown", markdown, output, args, executable, on_message
     )
