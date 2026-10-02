@@ -20,8 +20,8 @@ pip install prince-pdf
 One package, three names: install `prince-pdf`, import `prince_pdf`, run
 `prince`. (`pip install prince` is an unrelated statistics library.) The
 wheel bundles the engine — no other install steps and no network access at
-install or run time. Works on Linux (glibc and musl/Alpine, x86-64 and
-ARM64), macOS, and Windows.
+install or run time. Works on Linux (glibc x86-64 and ARM64; musl/Alpine
+ARM64 only), macOS, and Windows.
 
 In minimal containers install system fonts first:
 `apt-get install fonts-dejavu` or `apk add fontconfig ttf-dejavu`.
@@ -54,10 +54,10 @@ The `*_to_pdf` functions (`html_to_pdf`, `markdown_to_pdf`, `xml_to_pdf`)
 take the document as a string and pipe it through the engine with no
 temporary files; with `output=None` (the default) they return the PDF as
 bytes. `convert()` always treats strings as file paths, never as content.
-Markdown input requires Prince 17 or later. Failures raise `prince_pdf.PrinceError`, whose
-`.messages` list the engine's diagnostics as `(severity, location, text)`
-tuples — read them, they name the exact problem (missing file, bad CSS,
-unreachable resource).
+Markdown input requires Prince 17 or later. Failures raise
+`prince_pdf.PrinceError`, whose `.messages` list the engine's diagnostics
+as `(severity, location, text)` tuples — read them, they name the exact
+problem (missing file, bad CSS, unreachable resource).
 
 When converting a *string* whose content references relative resources
 (images, stylesheets), pass their location as a base URL — the engine
@@ -91,7 +91,9 @@ https://www.princexml.com/doc/.
 ## Common needs
 
 - **Archival / accessible output**: `--pdf-profile=PDF/A-3b` or
-  `--pdf-profile=PDF/UA-1` (tagged, accessible PDF).
+  `--pdf-profile=PDF/UA-1` (tagged, accessible PDF). PDF/UA requires the
+  document to declare its language and title (`<html lang="en">` and a
+  `<title>`); conversion fails without them.
 - **Print CSS**: Prince uses the `print` media type by default; use
   `--media=screen` to render screen styles instead.
 - **Remote resources**: documents referencing http(s) images or stylesheets
