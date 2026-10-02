@@ -154,6 +154,8 @@ Python 3.8 or later.
 ---
 
 Maintainer documentation — how wheels are built, verified, and released —
-is in [RELEASING.md](RELEASING.md). A Node.js equivalent of this package
-is [available on npm](https://www.npmjs.com/package/prince-pdf) under the
+is in
+[RELEASING.md](https://github.com/yeslogic/prince-python/blob/main/RELEASING.md).
+A Node.js equivalent of this package is
+[available on npm](https://www.npmjs.com/package/prince-pdf) under the
 same name.

@@ -1,6 +1,6 @@
 {
   "prince_version": "17",
-  "package_version": "17.0.0",
+  "package_version": "17.0.0.post1",
   "artifacts": {
     "manylinux_2_25_x86_64": {
       "url": "https://www.princexml.com/download/prince-17-linux-generic-x86_64.tar.gz",

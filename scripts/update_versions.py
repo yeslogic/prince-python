@@ -7,12 +7,15 @@ manylinux tags, and rewrites versions.json plus the version in pyproject.toml.
 
 Usage:
   python scripts/update_versions.py 17                      # final release
-  python scripts/update_versions.py 17b1                    # beta -> 17.0.0b1
-  python scripts/update_versions.py 20260630 --dev-of 17    # dated pre-release
-                                                            # -> 17.0.0.dev2026063000
-  python scripts/update_versions.py 20260630 --dev-of 17 --rev 1
+  python scripts/update_versions.py 18b1                    # beta -> 18.0.0b1
+  python scripts/update_versions.py 20261101 --dev-of 17.1  # dated pre-release
+                                                            # -> 17.1.0.dev2026110100
+  python scripts/update_versions.py 20261101 --dev-of 17.1 --rev 1
                                                             # packaging-only refresh
-                                                            # -> 17.0.0.dev2026063001
+                                                            # -> 17.1.0.dev2026110101
+
+--dev-of must name a release that has not shipped yet: .dev versions sort
+before the release they lead to, so after 17.0.0, use --dev-of 17.1.
 
 Dated pre-release builds MUST use --dev-of: without the mapping to a PEP 440
 .dev version, a date like 20260630 would become a package version that sorts
@@ -81,7 +84,7 @@ def pep440(prince_version, dev_of=None, rev=0):
     return pad(release) + (f"{pre_kind}{pre_num}" if pre_kind else "")
 
 # Verified against the LC_BUILD_VERSION / LC_VERSION_MIN_MACOSX load commands
-# of the 16.2 universal binary (10.13 on Intel, 11.0 on ARM). Re-check with
+# of the 16.2 and 17 universal binaries (10.13 on Intel, 11.0 on ARM). Re-check with
 # `otool -l lib/prince/bin/prince` if the deployment target ever changes.
 MACOS_TAG = "macosx_10_13_universal2"
 
@@ -104,12 +107,15 @@ def glibc_floor(tarball):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("version", help="Prince version, e.g. 17, 16.2, 17b1, 20260630")
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("version", help="Prince version, e.g. 17, 18b1, 20261101")
     parser.add_argument(
         "--dev-of",
         metavar="RELEASE",
-        help="the upcoming release this dated pre-release build leads to, e.g. 17",
+        help="the unreleased version this dated build leads to, e.g. 17.1",
     )
     parser.add_argument(
         "--rev",

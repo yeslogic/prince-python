@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "prince-pdf"
-version = "17.0.0"
+version = "17.0.0.post1"
 description = "Prince: convert HTML with CSS to PDF. Bundles the Prince engine - no separate install required."
 readme = "README.md"
 requires-python = ">=3.8"
@@ -13,9 +13,17 @@ license-files = ["LICENSE", "LICENSE-Prince.txt"]
 authors = [{ name = "YesLogic Pty Ltd" }]
 keywords = ["pdf", "html", "css", "markdown", "prince", "princexml", "typesetting", "paged media", "html to pdf"]
 classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Topic :: Printing",
     "Topic :: Text Processing :: Markup :: HTML",
+    "Topic :: Text Processing :: Markup :: Markdown",
+    "Typing :: Typed",
 ]
 
 [project.urls]
