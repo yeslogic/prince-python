@@ -107,6 +107,29 @@ def main():
         else:
             raise AssertionError("convert([]) did not raise")
 
+        with tempfile.TemporaryDirectory() as tmp:
+            # A file name starting with "-" must not be read as an option.
+            Path(tmp, "-dash.html").write_text(HTML)
+            cwd = os.getcwd()
+            os.chdir(tmp)
+            try:
+                data = prince_pdf.convert("-dash.html")
+            finally:
+                os.chdir(cwd)
+            assert data[:5] == b"%PDF-", "convert of a file named -dash.html"
+        print("input file names starting with '-': ok")
+
+        for bad in (lambda: prince_pdf.convert("x.html", args="--javascript"),
+                    lambda: prince_pdf.html_to_pdf(HTML, args="--javascript"),
+                    lambda: prince_pdf.html_to_pdf(None)):
+            try:
+                bad()
+            except TypeError:
+                pass
+            else:
+                raise AssertionError("bad argument type not rejected")
+        print("string args and non-text content rejected with TypeError")
+
         try:
             prince_pdf.convert("/nonexistent/input.html")
         except prince_pdf.PrinceError as exc:

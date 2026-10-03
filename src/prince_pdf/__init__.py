@@ -203,6 +203,23 @@ def _parse_structured_log(stderr: str) -> "tuple[list[Message], str | None]":
 OnMessage = Callable[[Message], None]
 
 
+def _check_args(args: Sequence[str]) -> None:
+    # A plain string is a Sequence[str] too, but would be split into
+    # one-character arguments.
+    if isinstance(args, (str, bytes)):
+        raise TypeError(
+            "args must be a sequence of argument tokens, e.g. "
+            "('--javascript',), not a single string"
+        )
+
+
+def _input_path(path: StrPath) -> str:
+    # The engine would read a leading "-" as an option (or "-" as stdin);
+    # "./" keeps it a file name, and works with any Prince version.
+    s = os.fspath(path)
+    return os.path.join(os.curdir, s) if s.startswith("-") else s
+
+
 def _convert(
     cli_args: Sequence[str],
     output: StrPath | None,
@@ -218,7 +235,9 @@ def _convert(
             "-o",
             "-" if output is None else str(output),
         ),
-        input=stdin,
+        # With nothing to pipe, give the engine an empty stdin rather
+        # than letting it inherit the caller's.
+        input=b"" if stdin is None else stdin,
         capture_output=True,
     )
     stderr = proc.stderr.decode("utf-8", errors="replace")
@@ -270,7 +289,8 @@ def convert(
     """
     if isinstance(inputs, (str, os.PathLike)):
         inputs = [inputs]
-    paths = [str(path) for path in inputs]
+    _check_args(args)
+    paths = [_input_path(path) for path in inputs]
     if not paths:
         raise ValueError("inputs must contain at least one path")
     return _convert(
@@ -287,6 +307,11 @@ def _string_to_pdf(
     on_message: "OnMessage | None" = None,
 ) -> "Path | bytes":
     """Pipe a document string through the engine with an explicit format."""
+    _check_args(args)
+    if not isinstance(content, (str, bytes)):
+        raise TypeError(
+            f"document content must be str or bytes, not {type(content).__name__}"
+        )
     if isinstance(content, str):
         content = content.encode("utf-8")
     return _convert(
